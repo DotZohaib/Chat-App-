@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat App</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+    <style>
+  body{
+    height: 100vh;
+    background-image: linear-gradient(rgb(255, 255, 255), rgb(109, 39, 239));
+}
+
+.logo{
+    display: block;
+    margin: auto;
+    width: 50px;
+    height: 50px;
+}
+h1{
+    margin-top: 12px;
+    font-size: 30px;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    text-align: center;
+}
+.container{
+    max-width: 955px;
+    border: 2px solid black;
+    border-radius: 13px;
+    margin: auto;
+    height: 60vh;
+    padding: 33px;
+    overflow-y: auto;
+    margin-bottom: 23px;
+}
+
+.message{
+    background-color: rgb(211, 204, 204);
+    width: 24%;
+    padding: 10px;
+    margin: 17px 12px;
+    border: 2px solid black;
+    border-radius: 10px;
+}
+.left{
+    float: left;
+    clear:both;
+}
+
+.right{
+    float: right;
+    clear:both;
+}
+
+#send-container{
+    display:block;
+    margin: auto;
+    text-align: center;
+    max-width: 1085px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+#messageInp{
+    width: 80%;
+    border: 2px solid black;
+    border-radius: 6px;
+    height: 34px;
+    font-size: 22px;
+}
+
+.btn{
+    margin: 0 5px;
+    width: 9%;
+    cursor: pointer;
+    border: 2px solid black;
+    border-radius: 6px;
+    height: 34px;
+}
+
+    </style>
+</head>
+<body>
+    <nav>
+        <img class="logo" src="chat.png" alt="">
+        <h1>Welcome to my Chat App</h1>
+    </nav>
+    <div class="container">
+        <ul id="message-list">
+            <!-- Messages will be appended here -->
+        </ul>
+        <form id="message-form">
+            <input type="text" id="message-input" placeholder="Type your message...">
+            <button type="submit">Send</button>
+        </form>
+    </div>
+    <audio id="notification-sound" src="ting.mp3"></audio>
+
+    <script>
+        // Initialize Socket.io
+        const socket = io('http://localhost:8000');
+
+        // Function to append messages to the chat
+        function appendMessage(message, position) {
+            const messageList = document.getElementById('message-list');
+            const messageItem = document.createElement('li');
+            messageItem.textContent = message;
+            messageItem.classList.add(position);
+            messageList.appendChild(messageItem);
+            
+            // Play notification sound for new messages
+            if (position === 'left') {
+                const audio = document.getElementById('notification-sound');
+                audio.play();
+            }
+        }
+
+        // Handle form submission
+        const messageForm = document.getElementById('message-form');
+        const messageInput = document.getElementById('message-input');
+
+        messageForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const message = messageInput.value.trim();
+
+            if (message !== '') {
+                // Emit the message to the server
+                socket.emit('send', message);
+
+                // Append the message to the chat
+                appendMessage(`You: ${message}`, 'right');
+
+                // Clear the input field
+                messageInput.value = '';
+            }
+        });
+
+        // Listen for incoming messages from the server
+        socket.on('receive', (data) => {
+            // Append the received message to the chat
+            appendMessage(`${data.name}: ${data.message}`, 'left');
+        });
+
+        // Ask a new user for their name and let the server know
+        const name = prompt("Enter your name to join");
+        socket.emit('new-user-joined', name);
+
+        // If a new user joins, receive their name from the server
+        socket.on('user-joined', (name) => {
+            appendMessage(`${name} joined the chat`, 'right');
+        });
+
+        // If a user leaves the chat, append the info to the container
+        socket.on('left', (name) => {
+            appendMessage(`${name} left the chat`, 'right');
+        });
+    </script>
+</body>
+</html>
